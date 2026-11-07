@@ -49,7 +49,9 @@ jobs:
           YTDLM_KEYSTORE_PASSWORD: ${{ secrets.YTDLM_KEYSTORE_PASSWORD }}
           YTDLM_KEY_ALIAS: ${{ secrets.YTDLM_KEY_ALIAS }}
           YTDLM_KEY_PASSWORD: ${{ secrets.YTDLM_KEY_PASSWORD }}
-        run: ./gradlew testReleaseUnitTest assembleRelease
+        # AGP 9 only creates unit-test tasks for the tested (debug) build
+        # type; the tests are pure Kotlin, so they cover release too.
+        run: ./gradlew testDebugUnitTest assembleRelease
 
       - name: Name, verify and checksum the APKs
         run: |
