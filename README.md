@@ -51,10 +51,10 @@ open the newest draft and download the file for your phone:
 | `YTDLManager-<version>-arm64-v8a.apk` | Almost every phone made in the last ~8 years. **Pick this if unsure.** |
 | `YTDLManager-<version>-armeabi-v7a.apk` | Older 32-bit phones |
 | `YTDLManager-<version>-x86_64.apk` | Emulators, some Chromebooks and tablets |
-| `YTDLManager-<version>-universal.apk` | Works on all of the above, but about 4× bigger |
+| `YTDLManager-<version>-universal.apk` | Works on all of the above, but about 230 MB |
 
-Each APK is large (around 50–60 MB) because it carries its own Python and
-FFmpeg.
+Each APK is large (about 80 MB) because it carries its own Python, yt-dlp
+and FFmpeg.
 
 Alternatively, download it on a computer and move it to the phone over USB,
 Google Drive or Quick Share.
