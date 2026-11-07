@@ -188,12 +188,15 @@ private fun clipboardText(context: Context): String? {
 @Composable
 private fun PreviewCard(vm: MainViewModel, info: MediaInfo, onDownload: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        AsyncImage(
-            model = info.thumbnailUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-        )
+        // Plain file links have no thumbnail: skip the empty 16:9 box.
+        if (info.thumbnailUrl != null) {
+            AsyncImage(
+                model = info.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            )
+        }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(info.title, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
             val meta = listOfNotNull(info.uploader, info.durationSeconds?.let(Formatters::duration), info.site)

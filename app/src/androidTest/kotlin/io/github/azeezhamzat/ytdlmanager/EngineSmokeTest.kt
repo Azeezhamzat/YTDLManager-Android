@@ -13,6 +13,7 @@ import io.github.azeezhamzat.ytdlmanager.engine.YtDlpException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeFalse
@@ -36,11 +37,25 @@ class EngineSmokeTest {
         withTimeout(180_000) { engine.state.first { it is EngineState.Ready } as EngineState.Ready }
     }
 
+    /** Waits for the first-launch update to replace the yt-dlp bundled in the APK. */
+    private fun updated(): EngineState.Ready = runBlocking {
+        val result = withTimeoutOrNull(300_000) {
+            engine.state.first { it is EngineState.Ready && (it.ytDlpVersion ?: "") > BUNDLED_YT_DLP } as EngineState.Ready
+        }
+        result ?: throw AssertionError("yt-dlp wasn't updated from the bundled $BUNDLED_YT_DLP: ${engine.state.value}")
+    }
+
     @Test
     fun engineStartsAndReportsItsVersion() {
         val version = ready().ytDlpVersion
         Log.i(TAG, "yt-dlp version: $version")
         assertTrue("version: $version", version != null && Regex("""\d{4}\.\d{2}\.\d{2}.*""").matches(version))
+    }
+
+    /** YouTube rejects the months-old copy in the APK, so this must work. */
+    @Test
+    fun ytDlpIsUpdatedOnFirstLaunch() {
+        Log.i(TAG, "updated yt-dlp: ${updated().ytDlpVersion}")
     }
 
     @Test
@@ -84,7 +99,7 @@ class EngineSmokeTest {
      */
     @Test
     fun youTubeFormatsNeedTheJavaScriptRuntime(): Unit = runBlocking {
-        ready()
+        updated()
         withTimeout(600_000) {
             val info = try {
                 engine.fetchInfo(YOUTUBE_SAMPLE)
@@ -99,6 +114,8 @@ class EngineSmokeTest {
 
     companion object {
         private const val TAG = "EngineSmokeTest"
+        // yt-dlp version inside youtubedl-android 0.18.1 (versions are dates, so they sort as text).
+        private const val BUNDLED_YT_DLP = "2025.11.12"
         // 5-second 720p clip with AAC audio (2.8 MB), published for testing.
         private const val SAMPLE = "https://download.samplelib.com/mp4/sample-5s.mp4"
         // "Big Buck Bunny" by the Blender Foundation (CC BY 3.0), official upload.

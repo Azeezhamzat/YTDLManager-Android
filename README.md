@@ -170,13 +170,16 @@ and release artifacts:
   reused between downloads.
 - The yt-dlp **bundled in the APK is 2025.11.12**, which YouTube has long
   since outdated. The app therefore **updates yt-dlp from its official GitHub
-  releases on first launch and then at most daily**. Updates wait until no
-  download is running. If YouTube fails, **Settings › Check for update now** is
-  the first thing to try.
+  releases on first launch and then at most daily**. When an update is due,
+  it runs at startup before any fetch or download, so nothing uses the stale
+  copy. Updates never replace yt-dlp while a download is running. If YouTube
+  fails, **Settings › Check for update now** is the first thing to try.
 
-The emulator smoke test (`youTubeFormatsNeedTheJavaScriptRuntime`) checks this
-end to end: it asserts YouTube offers 1080p or higher, which only happens when
-the challenges are solved.
+The emulator smoke tests check the update (`ytDlpIsUpdatedOnFirstLaunch`) and
+YouTube end to end (`youTubeFormatsNeedTheJavaScriptRuntime`, which asserts
+1080p or higher is offered, as happens only when the challenges are solved).
+YouTube often bot-checks GitHub's CI machines, in which case that test is
+skipped rather than failed, so it really gets checked on a phone.
 
 ## Why it isn't on Google Play
 

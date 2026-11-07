@@ -63,18 +63,43 @@ class YtDlpEngine(private val context: Context) {
 
     private val cacheDir: String get() = File(context.noBackupFilesDir, "yt-dlp-cache").absolutePath
 
-    /** Unpacks Python and FFmpeg on first launch (a few seconds), then reports the version. */
-    fun start(scope: CoroutineScope) {
+    /**
+     * Unpacks Python and FFmpeg on first launch (a few seconds), then reports
+     * the version. If [updateDue] says so, the latest yt-dlp is fetched before
+     * any command runs: the copy inside the APK is months old and YouTube
+     * usually rejects it, so a download started right after launch must not
+     * race ahead of the update. [onUpdate] gets the outcome.
+     */
+    fun start(
+        scope: CoroutineScope,
+        updateDue: () -> Boolean = { false },
+        onUpdate: (UpdateResult) -> Unit = {},
+    ) {
         scope.launch(Dispatchers.IO) {
             try {
                 ytdl.init(context)
                 FFmpeg.getInstance().init(context)
-                ready.complete(Unit)
-                _state.value = EngineState.Ready(readVersion())
             } catch (e: Throwable) {
                 Log.e(TAG, "init failed", e)
                 _state.value = EngineState.Failed(e.message ?: e.javaClass.simpleName)
                 ready.completeExceptionally(e)
+                return@launch
+            }
+            val version = readVersion()
+            if (!updateDue()) {
+                _state.value = EngineState.Ready(version)
+                ready.complete(Unit)
+                return@launch
+            }
+            // Holding the lock before commands can start makes them queue
+            // behind the update instead of running on the stale copy.
+            updateLock.lock()
+            try {
+                _state.value = EngineState.Updating(version)
+                ready.complete(Unit)
+                updateLocked(version, onUpdate)
+            } finally {
+                updateLock.unlock()
             }
         }
     }
@@ -143,28 +168,38 @@ class YtDlpEngine(private val context: Context) {
     }
 
     /** Fetches the newest stable yt-dlp from its GitHub releases. */
-    suspend fun updateYtDlp(): UpdateResult = withContext(Dispatchers.IO) {
+    suspend fun updateYtDlp(onResult: (UpdateResult) -> Unit = {}): UpdateResult = withContext(Dispatchers.IO) {
         try {
             awaitReady()
         } catch (e: Throwable) {
             return@withContext UpdateResult.Failed(e.message ?: "yt-dlp isn't available")
         }
         updateLock.withLock {
-            if (activeCommands.get() > 0) return@withLock UpdateResult.Busy
-            val before = currentVersion()
-            _state.value = EngineState.Updating(before)
-            try {
-                val status = ytdl.updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
-                val version = readVersion()
-                if (status == YoutubeDL.UpdateStatus.DONE) UpdateResult.Updated(version)
-                else UpdateResult.AlreadyCurrent(version)
-            } catch (e: Exception) {
-                Log.w(TAG, "update failed", e)
-                UpdateResult.Failed(e.message ?: e.javaClass.simpleName)
-            } finally {
-                _state.value = EngineState.Ready(currentVersion())
-            }
+            if (activeCommands.get() > 0) UpdateResult.Busy else updateLocked(currentVersion(), onResult)
         }
+    }
+
+    /**
+     * Call with [updateLock] held and no command running. [onResult] runs
+     * before the state returns to Ready, so anyone waiting for Ready sees
+     * its effects (such as the time of the last check).
+     */
+    private fun updateLocked(before: String?, onResult: (UpdateResult) -> Unit = {}): UpdateResult {
+        _state.value = EngineState.Updating(before)
+        var after = before
+        val result = try {
+            val status = ytdl.updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
+            after = readVersion()
+            if (status == YoutubeDL.UpdateStatus.DONE) UpdateResult.Updated(after)
+            else UpdateResult.AlreadyCurrent(after)
+        } catch (e: Exception) {
+            Log.w(TAG, "update failed", e)
+            UpdateResult.Failed(e.message ?: e.javaClass.simpleName)
+        }
+        Log.i(TAG, "yt-dlp update from $before: $result")
+        onResult(result)
+        _state.value = EngineState.Ready(after)
+        return result
     }
 
     private fun currentVersion(): String? = when (val s = _state.value) {
