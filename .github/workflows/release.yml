@@ -1,7 +1,10 @@
 name: Release
 
 # Push a tag like v0.1.0 (matching versionName in app/build.gradle.kts) to
-# build signed APKs and attach them to a GitHub Release.
+# build signed APKs and attach them to a *draft* GitHub Release. A draft is
+# visible only to people with write access to the repository, so the APKs are
+# not public: open the Releases page while signed in to download them.
+# To share a build publicly later, press "Publish release" on the draft.
 on:
   push:
     tags: ['v*']
@@ -61,6 +64,7 @@ jobs:
 
       - uses: softprops/action-gh-release@v3
         with:
+          draft: true
           files: dist/*
           fail_on_unmatched_files: true
           generate_release_notes: true

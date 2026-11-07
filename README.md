@@ -41,9 +41,10 @@ Requires **Android 10 or newer**.
 
 ### 1. Download the APK
 
-On your phone, open the
-[latest release](https://github.com/Azeezhamzat/YTDLManager-Android/releases/latest)
-and download the file for your phone:
+Releases are created as **drafts**, which only the repository owner can see.
+On your phone, sign in to GitHub in the browser, open the
+[Releases page](https://github.com/Azeezhamzat/YTDLManager-Android/releases),
+open the newest draft and download the file for your phone:
 
 | File | For |
 |---|---|
@@ -54,6 +55,9 @@ and download the file for your phone:
 
 Each APK is large (around 50–60 MB) because it carries its own Python and
 FFmpeg.
+
+Alternatively, download it on a computer and move it to the phone over USB,
+Google Drive or Quick Share.
 
 ### 2. Allow "Install unknown apps"
 
@@ -176,10 +180,10 @@ the challenges are solved.
 
 ## Why it isn't on Google Play
 
-Google Play's policies don't allow apps that download YouTube videos, so this
-is distributed as an APK from GitHub Releases and installed by sideloading
-(as [Seal](https://github.com/JunkFood02/Seal), YTDLnis and others are).
-F-Droid would be an option in future.
+It's made for personal use on your own phones. Google Play's policies don't
+allow apps that download YouTube videos anyway, so it's installed by
+sideloading an APK (as [Seal](https://github.com/JunkFood02/Seal), YTDLnis
+and others are).
 
 ## Building from source
 
@@ -215,8 +219,9 @@ The debug build installs next to a release build (its id ends in `.debug`).
 
 `.github/workflows/release.yml` runs on tags `v*`. It builds and signs the
 release APKs, prints their certificates, writes `SHA256SUMS.txt`, and
-attaches everything to a GitHub Release. The tag must match `versionName` in
-`app/build.gradle.kts`.
+attaches everything to a **draft** GitHub Release, visible only to people with
+write access. Nothing is published unless you press **Publish release** on the
+draft. The tag must match `versionName` in `app/build.gradle.kts`.
 
 ```bash
 git tag v0.1.0
